@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>天气可视化</title>
+    <script src="https://cdn.bootcss.com/echarts/4.1.0.rc2/echarts-en.common.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个具备大小（宽高）的 Dom -->
+    <div id="main" style="width: 600px; height: 400px;"></div>
+    <script>
+        const log = console.log.bind(console)
+
+        const ajax = (method, path, data, callback) => {
+            let r = new XMLHttpRequest()
+            r.open(method, path, true)
+            r.onreadystatechange = () => {
+                if (r.readyState === 4) {
+                    log('r', r)
+                    callback(r.response)
+                }
+            }
+            r.send(data)
+        }
+
+        // 基于准备好的 dom，初始化 echarts 实例
+        var element = document.querySelector('#main')
+        var myChart = echarts.init(element)
+
+
+
+        const parseData = (data) => {
+            let location = data.HeWeather6[0].basic.location
+            let daily_forecast = data.HeWeather6[0].daily_forecast
+            let dates = []
+            let tmp_max = []
+            let tmp_min = []
+            for (const i of daily_forecast) {
+                let date = i.date
+                dates.push(date)
+                let max = i.tmp_max
+                tmp_max.push(max)
+                let min = i.tmp_min
+                tmp_min.push(min)
+            }
+            log('location', location)
+            log('tmp_max', tmp_max)
+            log('tmp_min', tmp_min)
+            log('dates', dates)
+            // 指定图表的配置项和数据
+            var option = {
+                title: {
+                    text: `${location}最近三天气温变化`,
+                    subtext: '仅供参考'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: ['最高气温', '最低气温']
+                },
+                toolbox: {
+                    show: true,
+                    feature: {
+                        dataZoom: {
+                            yAxisIndex: 'none'
+                        },
+                        dataView: { readOnly: false },
+                        magicType: { type: ['line', 'bar'] },
+                        restore: {},
+                        saveAsImage: {}
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: [...dates]
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: '{value} °C'
+                    }
+                },
+                series: [
+                    {
+                        name: '最高气温',
+                        type: 'line',
+                        data: [...tmp_max],
+                        markPoint: {
+                            data: [
+                                { type: 'max', name: '最大值' },
+                                { type: 'min', name: '最小值' }
+                            ]
+                        },
+                        markLine: {
+                            data: [
+                                { type: 'average', name: '平均值' }
+                            ]
+                        }
+                    },
+                    {
+                        name: '最低气温',
+                        type: 'line',
+                        data: [...tmp_min],
+                        markPoint: {
+                            data: [
+                                { name: '周最低', value: -2, xAxis: 1, yAxis: -1.5 }
+                            ]
+                        },
+                        markLine: {
+                            data: [
+                                { type: 'average', name: '平均值' },
+                                [{
+                                    symbol: 'none',
+                                    x: '90%',
+                                    yAxis: 'max'
+                                }, {
+                                    symbol: 'circle',
+                                    label: {
+                                        normal: {
+                                            position: 'start',
+                                            formatter: '最大值'
+                                        }
+                                    },
+                                    type: 'max',
+                                    name: '最高点'
+                                }]
+                            ]
+                        }
+                    }
+                ]
+            };
+
+            // 使用刚指定的配置项和数据显示图表。
+            myChart.setOption(option)
+        }
+
+        // 异步数据处理方式
+        const fetchWeather = () => {
+            // 在这里获取 weather 数据
+            // 并且处理成 option 需要的格式
+            let method = 'get'
+            let url = 'https://free-api.heweather.com/s6/weather/forecast?location=zhengzhou&key=fb3c883bc9b04d068d9f9d0f24caf92f'
+            let data = {}
+            ajax(method, url, data, (r) => {
+                let j = JSON.parse(r)
+                parseData(j)
+            })
+        }
+
+        const __main = () => {
+            fetchWeather()
+        }
+
+        __main()
+    </script>
+</body>
+
+</html>
